@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manajemen Keuangan Pribadi - Modern UI</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+:root{
+--primary:#2563eb;--secondary:#0ea5e9;--danger:#dc2626;
+--bg:#f9fafb;--card:#fff;--text:#0f172a;--muted:#64748b;--radius:16px;
+--success:#16a34a;--warning:#f59e0b;
+--toast-bg:#16a34a;
+--progress-bg:#e5e7eb;
+--progress-fill:#2563eb;
+}
+*{box-sizing:border-box;transition:all 0.3s ease;}
+body{margin:0;font-family:'Inter',system-ui;background:var(--bg);color:var(--text);}
+.container{max-width:1200px;margin:auto;padding:16px;padding-bottom:120px;}
+.card{background:var(--card);border-radius:var(--radius);padding:20px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.06);transition:transform 0.3s ease;}
+.card:hover{transform:translateY(-2px);}
+h2,h3{margin:0 0 12px;}
+input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:12px;font-size:14px;outline:none;}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);}
+textarea{resize:none;}
+button{padding:10px;border:none;border-radius:10px;font-weight:600;cursor:pointer;font-size:14px;transition:0.3s;}
+button:hover{opacity:0.85;}
+.btn{background:var(--primary);color:white;}
+.btn2{background:var(--secondary);color:white;}
+.btn-danger{background:var(--danger);color:white;}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;border-radius:10px;overflow:hidden;}
+th,td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left;}
+th{color:var(--muted);background:#f1f5f9;}
+tr:hover td{background:#f0f4f8;}
+.tab{display:none;}
+.tab.active{display:block;}
+nav{position:fixed;bottom:0;left:0;right:0;height:70px;display:flex;background:#fff;border-top:1px solid #e5e7eb;z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,0.08);}
+nav button{flex:1;background:none;border:none;color:var(--muted);font-size:12px;line-height:1.2;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;}
+nav button.active{color:var(--primary);font-weight:700;}
+nav button.active::after{content:'';position:absolute;top:0;left:25%;width:50%;height:3px;background:var(--primary);border-radius:3px;}
+@media(min-width:768px){
+nav{top:0;bottom:auto;border-top:none;border-bottom:1px solid #e5e7eb;}
+.container{padding-top:90px;padding-bottom:30px;}
+}
+.table-wrap{overflow-x:auto;transition:all 0.3s ease;}
+
+/* Modal */
+#modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;z-index:200;opacity:0;transition:opacity 0.3s;}
+#modal.show{display:flex;opacity:1;}
+#modalContent{background:white;padding:24px;border-radius:20px;max-width:400px;width:90%;text-align:center;position:relative;transform:scale(0.7);transition:transform 0.3s;}
+#modal.show #modalContent{transform:scale(1);}
+#modalContent button{margin:8px;}
+
+/* Toast */
+#toast{display:none;position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--toast-bg);color:white;padding:14px 22px;border-radius:12px;z-index:300;opacity:0;transition:all 0.4s ease, transform 0.4s ease;}
+#toast.show{display:block;opacity:1;transform:translateX(-50%) translateY(-10px);}
+
+/* Progress bar for target */
+.progress-bar{background:var(--progress-bg);border-radius:10px;height:20px;overflow:hidden;margin-top:6px;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--secondary));width:0%;transition:width 0.6s ease;text-align:right;padding-right:6px;color:white;font-weight:600;line-height:20px;font-size:12px;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+<button class="active" onclick="openTab('home',this)">🏠<br>Home</button>
+<button onclick="openTab('tabungan',this)">🏦<br>Tabungan</button>
+<button onclick="openTab('urgent',this)">🚑<br>Darurat</button>
+<button onclick="openTab('target',this)">🎯<br>Target</button>
+<button onclick="openTab('catatan',this)">📒<br>Catatan</button>
+</nav>
+
+<div class="container">
+
+<!-- HOME -->
+<div id="home" class="tab active">
+<div class="card">
+<h2>Saldo Utama</h2>
+<h1 id="saldo">Rp 0</h1>
+</div>
+<div class="card">
+<h2>Pemasukan / Pengeluaran</h2>
+<select id="jenis">
+<option value="masuk">Pemasukan</option>
+<option value="keluar">Pengeluaran</option>
+</select>
+<input id="jumlah" type="number" placeholder="Jumlah" min="0">
+<input id="keterangan" placeholder="Keterangan">
+<button class="btn" onclick="tambahTransaksi()">Simpan</button>
+</div>
+<div class="card">
+<h2>Catatan Hari Ini</h2>
+<div class="table-wrap">
+<table id="tabelHari">
+<tr><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th></th></tr>
+</table>
+</div>
+</div>
+</div>
+
+<!-- TABUNGAN -->
+<div id="tabungan" class="tab">
+<div class="card">
+<h2>Tabungan</h2>
+<p>Saldo: <b id="saldoTabungan">Rp 0</b></p>
+<input id="inputTabungan" type="number" placeholder="Jumlah" min="0">
+<button class="btn" onclick="isiTabungan()">Isi</button>
+<button class="btn2" onclick="tarikTabungan()">Tarik</button>
+</div>
+<div class="card">
+<h3>Catatan Tabungan</h3>
+<div class="table-wrap">
+<table id="tabelTabungan">
+<tr><th>Tanggal</th><th>Jenis</th><th>Jumlah</th><th></th></tr>
+</table>
+</div>
+</div>
+</div>
+
+<!-- URGENT -->
+<div id="urgent" class="tab">
+<div class="card">
+<h2>Dana Darurat</h2>
+<p>Saldo: <b id="saldoUrgent">Rp 0</b></p>
+<input id="inputUrgent" type="number" placeholder="Jumlah" min="0">
+<textarea id="ketUrgent" placeholder="Keterangan penarikan (wajib saat tarik)"></textarea>
+<button class="btn" onclick="isiUrgent()">Isi</button>
+<button class="btn2" onclick="tarikUrgent()">Tarik</button>
+</div>
+<div class="card">
+<h3>Catatan Dana Darurat</h3>
+<div class="table-wrap">
+<table id="tabelUrgent">
+<tr><th>Tanggal</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th></th></tr>
+</table>
+</div>
+</div>
+</div>
+
+<!-- TARGET -->
+<div id="target" class="tab">
+<div class="card">
+<h2>Target Tabungan (maks 5)</h2>
+<input id="targetNama" placeholder="Nama Target">
+<input id="targetJumlah" type="number" placeholder="Jumlah Target" min="0">
+<button class="btn" onclick="tambahTarget()">Tambah</button>
+<div id="listTarget"></div>
+</div>
+</div>
+
+<!-- CATATAN -->
+<div id="catatan" class="tab">
+<div class="card">
+<h2>Catatan Bulanan / Tahunan</h2>
+<select id="bulan"></select>
+<select id="tahun"></select>
+<button class="btn" onclick="renderCatatan()">Terapkan</button>
+<div class="table-wrap">
+<table id="tabelCatatan">
+<tr><th>Tanggal</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th></th></tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Modal Popup -->
+<div id="modal">
+  <div id="modalContent">
+    <p id="modalText"></p>
+    <button id="modalConfirm" class="btn">Ya</button>
+    <button id="modalCancel" class="btn2">Batal</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+let saldo=0,saldoTabungan=0,saldoUrgent=0;
+let transaksi=[],tabunganLog=[],urgentLog=[],targets=[];
+
+const rp=n=>'Rp '+n.toLocaleString('id-ID');
+const $=id=>document.getElementById(id);
+
+function openTab(id,btn){
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+$(id).classList.add('active'); btn.classList.add('active');
+renderAll();
+}
+
+function showModal(text,onConfirm){
+const modal=$('modal');
+$('modalText').textContent=text;
+modal.classList.add('show');
+const confirmBtn=$('modalConfirm');
+const cancelBtn=$('modalCancel');
+function close(){ modal.classList.remove('show'); confirmBtn.onclick=null; cancelBtn.onclick=null;}
+confirmBtn.onclick=function(){ onConfirm(); close();};
+cancelBtn.onclick=close;
+}
+
+function showToast(text,color=undefined){
+const toast=$('toast'); toast.textContent=text; toast.style.background=color||'var(--toast-bg)';
+toast.classList.add('show');
+setTimeout(()=>{toast.classList.remove('show');},2000);
+}
+
+function hapus(arr,id){
+const i=arr.findIndex(x=>x.id===id);
+if(i>-1){
+const t=arr[i];
+if(arr===transaksi){ saldo += t.jenis==='masuk'?-t.jumlah:t.jumlah; }
+else if(arr===tabunganLog){ if(t.jenis==='Isi'){ saldo+=t.jumlah; saldoTabungan-=t.jumlah; } else if(t.jenis==='Tarik'){ saldo-=t.jumlah; saldoTabungan+=t.jumlah; } }
+else if(arr===urgentLog){ if(t.jenis==='Isi'){ saldo+=t.jumlah; saldoUrgent-=t.jumlah; } else if(t.jenis==='Tarik'){ saldo-=t.jumlah; saldoUrgent+=t.jumlah; } }
+arr.splice(i,1); renderAll(); showToast('Berhasil dihapus'); 
+}
+}
+
+function tambahTransaksi(){
+const j=+$('jumlah').value;
+if(!j||j<=0)return showToast('Jumlah tidak valid','var(--danger)');
+saldo+=$('jenis').value==='masuk'?j:-j;
+transaksi.push({id:Date.now(),tgl:new Date(),jenis:$('jenis').value,jumlah:j,ket:$('keterangan').value});
+$('jumlah').value='';$('keterangan').value='';
+renderAll(); showToast('Transaksi berhasil');
+}
+
+function isiTabungan(){
+const j=+$('inputTabungan').value;
+if(j>saldo||!j)return showToast('Saldo tidak cukup','var(--danger)');
+saldo-=j;saldoTabungan+=j;
+tabunganLog.push({id:Date.now(),tgl:new Date(),jenis:'Isi',jumlah:j});
+$('inputTabungan').value='';
+renderAll(); showToast('Berhasil isi tabungan');
+}
+
+function tarikTabungan(){
+const j=+$('inputTabungan').value;
+if(j>saldoTabungan||!j)return showToast('Tabungan tidak cukup','var(--danger)');
+showModal('Apakah anda yakin dengan keputusan anda',()=>{
+saldo+=j; saldoTabungan-=j;
+tabunganLog.push({id:Date.now(),tgl:new Date(),jenis:'Tarik',jumlah:j});
+$('inputTabungan').value='';
+renderAll(); showToast('Berhasil tarik tabungan');
+});
+}
+
+function isiUrgent(){
+const j=+$('inputUrgent').value;
+if(j>saldo||!j)return showToast('Saldo tidak cukup','var(--danger)');
+saldo-=j;saldoUrgent+=j;
+urgentLog.push({id:Date.now(),tgl:new Date(),jenis:'Isi',jumlah:j,ket:'-'});
+$('inputUrgent').value='';$('ketUrgent').value='';
+renderAll(); showToast('Berhasil isi dana darurat');
+}
+
+function tarikUrgent(){
+const j=+$('inputUrgent').value;
+const k=$('ketUrgent').value.trim();
+if(!k)return showToast('Keterangan wajib diisi','var(--danger)');
+if(j>saldoUrgent||!j)return showToast('Dana darurat tidak cukup','var(--danger)');
+showModal('Apakah anda yakin dengan keputusan anda',()=>{
+saldo+=j; saldoUrgent-=j;
+urgentLog.push({id:Date.now(),tgl:new Date(),jenis:'Tarik',jumlah:j,ket:k});
+$('inputUrgent').value='';$('ketUrgent').value='';
+renderAll(); showToast('Berhasil tarik dana darurat');
+});
+}
+
+function tambahTarget(){
+if(targets.length>=5)return showToast('Maksimal 5 target','var(--danger)');
+const n=$('targetNama').value.trim();
+const j=+$('targetJumlah').value;
+if(!n||!j)return showToast('Target tidak valid','var(--danger)');
+targets.push({id:Date.now(),nama:n,jumlah:j});
+$('targetNama').value='';$('targetJumlah').value='';
+renderAll(); showToast('Target berhasil ditambahkan');
+}
+
+function renderCatatan(){
+const m=+$('bulan').value;
+const y=+$('tahun').value;
+const t=$('tabelCatatan');
+t.innerHTML='<tr><th>Tanggal</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th></th></tr>';
+transaksi.filter(tr=>tr.tgl.getMonth()===m&&tr.tgl.getFullYear()===y).forEach(tr=>{
+t.insertRow().innerHTML=`<td>${tr.tgl.toLocaleDateString()}</td><td>${tr.jenis}</td><td>${rp(tr.jumlah)}</td><td>${tr.ket}</td><td><button class="btn-danger" onclick="hapus(transaksi,${tr.id})">x</button></td>`;
+});
+}
+
+function renderAll(){
+$('saldo').textContent=rp(saldo);
+$('saldoTabungan').textContent=rp(saldoTabungan);
+$('saldoUrgent').textContent=rp(saldoUrgent);
+
+// Hari ini
+$('tabelHari').innerHTML='<tr><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th></th></tr>';
+const today=new Date().toDateString();
+transaksi.filter(t=>t.tgl.toDateString()===today).forEach(t=>{
+$('tabelHari').insertRow().innerHTML=`<td>${t.jenis}</td><td>${rp(t.jumlah)}</td><td>${t.ket}</td><td><button class="btn-danger" onclick="hapus(transaksi,${t.id})">x</button></td>`;
+});
+
+// Tabungan
+$('tabelTabungan').innerHTML='<tr><th>Tanggal</th><th>Jenis</th><th>Jumlah</th><th></th></tr>';
+tabunganLog.forEach(t=>{
+$('tabelTabungan').insertRow().innerHTML=`<td>${t.tgl.toLocaleDateString()}</td><td>${t.jenis}</td><td>${rp(t.jumlah)}</td><td><button class="btn-danger" onclick="hapus(tabunganLog,${t.id})">x</button></td>`;
+});
+
+// Urgent
+$('tabelUrgent').innerHTML='<tr><th>Tanggal</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th><th></th></tr>';
+urgentLog.forEach(u=>{
+$('tabelUrgent').insertRow().innerHTML=`<td>${u.tgl.toLocaleDateString()}</td><td>${u.jenis}</td><td>${rp(u.jumlah)}</td><td>${u.ket}</td><td><button class="btn-danger" onclick="hapus(urgentLog,${u.id})">x</button></td>`;
+});
+
+// Target
+const lt=$('listTarget');lt.innerHTML='';
+targets.forEach(t=>{
+const p=Math.min(100,Math.floor(saldoTabungan/t.jumlah*100));
+const sisa=t.jumlah-saldoTabungan>0?t.jumlah-saldoTabungan:0;
+lt.innerHTML+=`<div class="card"><b>${t.nama}</b>
+<div class="progress-bar"><div class="progress-fill" style="width:${p}%">${p}%</div></div>
+<div>${rp(sisa)} lagi untuk mencapai target</div>
+<button class="btn-danger" onclick="hapus(targets,${t.id})">Hapus</button>
+</div>`;
+});
+}
+
+function init(){
+const bulanNama=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+bulanNama.forEach((n,i)=>{$('bulan').appendChild(new Option(n,i));});
+const tahunSekarang=new Date().getFullYear();
+for(let y=tahunSekarang-5;y<=tahunSekarang+5;y++)$('tahun').appendChild(new Option(y,y));
+$('bulan').value=new Date().getMonth();
+$('tahun').value=tahunSekarang;
+renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
